@@ -231,13 +231,38 @@ def main():
         layout="wide"
     )
     
-    # Custom styling
+    # Custom styling with placeholder animations
     st.markdown("""
     <style>
     .main .block-container {padding-top: 2rem;}
     h1 {color: #0052FF;}
     .stButton>button {background: #0052FF; color: white;}
-    .tweet-card {border: 1px solid #e6ecf0; border-radius: 12px; padding: 1.5rem; margin: 1rem 0;}
+    .tweet-card {
+        border: 1px solid #e6ecf0;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+    }
+    .placeholder {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+        border-radius: 4px;
+        height: 20px;
+        margin: 8px 0;
+    }
+    @keyframes loading {
+        0% {background-position: 200% 0;}
+        100% {background-position: -200% 0;}
+    }
+    .placeholder-text {
+        color: #888;
+        text-align: center;
+        padding: 2rem;
+        background: #f8f9fa;
+        border-radius: 12px;
+        margin: 1rem 0;
+    }
     </style>
     """, unsafe_allow_html=True)
     
@@ -247,7 +272,7 @@ def main():
     if check_and_post():
         st.success("Tweet posted automatically!")
     
-    # Layout
+    # Layout with placeholders
     col1, col2 = st.columns([1, 3])
     
     with col1:
@@ -260,33 +285,60 @@ def main():
             else:
                 stop_bot()
         
-        # Bot status
+        # Bot status with placeholder
+        status_placeholder = st.empty()
         status = "Running 🟢" if st.session_state.bot_running else "Stopped 🔴"
-        st.info(f"Bot Status: {status}")
+        status_placeholder.info(f"Bot Status: {status}")
         
-        # Status information
         st.subheader("Status")
         
-        # Next post time
+        # Next post time with placeholder
+        next_post_placeholder = st.empty()
         if st.session_state.next_post_time and st.session_state.bot_running:
             time_remaining = st.session_state.next_post_time - datetime.now()
             if time_remaining.total_seconds() > 0:
                 mins, secs = divmod(int(time_remaining.total_seconds()), 60)
-                st.info(f"Next tweet in: {mins} min {secs} sec")
+                next_post_placeholder.info(f"Next tweet in: {mins} min {secs} sec")
+        else:
+            next_post_placeholder.markdown("""
+            <div class="placeholder-text">
+                ⏳ Waiting to start...
+            </div>
+            """, unsafe_allow_html=True)
         
-        # Last posted time
+        # Last posted time with placeholder
+        last_post_placeholder = st.empty()
         if st.session_state.last_posted:
             time_since = (datetime.now() - st.session_state.last_posted).seconds // 60
-            st.metric("Last Posted", f"{time_since} mins ago")
+            last_post_placeholder.metric("Last Posted", f"{time_since} mins ago")
+        else:
+            last_post_placeholder.markdown("""
+            <div class="placeholder-text">
+                📝 No tweets posted yet
+            </div>
+            """, unsafe_allow_html=True)
         
-        # Tweet count
-        st.metric("Total Tweets", len(st.session_state.tweet_history))
+        # Tweet count with placeholder
+        count_placeholder = st.empty()
+        count_placeholder.metric("Total Tweets", len(st.session_state.tweet_history))
     
-    # Tweet History
+    # Tweet History with placeholders
     with col2:
         st.header("Tweet History")
+        history_placeholder = st.empty()
+        
         if not st.session_state.tweet_history:
-            st.info("No tweets posted yet. Start the bot to begin!")
+            history_placeholder.markdown("""
+            <div class="placeholder-text">
+                <h3>👋 Welcome to CryptoXpress Twitter Bot!</h3>
+                <p>No tweets posted yet. Start the bot to begin generating content.</p>
+                <div style="margin: 20px 0;">
+                    <div class="placeholder" style="width: 80%;"></div>
+                    <div class="placeholder" style="width: 60%;"></div>
+                    <div class="placeholder" style="width: 70%;"></div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
         else:
             for tweet in reversed(st.session_state.tweet_history):
                 st.markdown(f"""
@@ -302,11 +354,12 @@ def main():
                 </div>
                 """, unsafe_allow_html=True)
     
-    # Auto-refresh the app every few seconds to check for new tweets
+    # Loading state while checking for new tweets
     if st.session_state.bot_running:
-        st.empty()
-        time.sleep(1)
-        st.rerun()
+        with st.spinner('Monitoring for new tweets...'):
+            st.empty()
+            time.sleep(1)
+            st.rerun()
 
 if __name__ == "__main__":
     main()
